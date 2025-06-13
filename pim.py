@@ -134,8 +134,8 @@ def main():
     HAS_SPEAKER = detect_speaker()
 
     # Load OpenAI and Whisper
-    openai_key = load_openai_key()
-    client = OpenAI(api_key=openai_key)
+    os.environ["OPENAI_API_KEY"] = load_openai_key()
+    client = OpenAI()
     whisper_model = load_whisper_model(MODEL_SIZE)
 
     # Input: Mic or keyboard
