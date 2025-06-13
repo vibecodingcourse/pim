@@ -9,7 +9,7 @@ import queue
 import sys
 import platform
 import os
-from openai import OpenAI
+import openai
 
 # ========== CONFIG ==========
 
@@ -97,7 +97,7 @@ def transcribe_audio(model, audio_path):
 
 def query_chatgpt(prompt, model="gpt-4"):
     print("🤖 Querying ChatGPT...")
-    response = client.chat.completions.create(
+    response = openai.ChatCompletion.create(
         model=model,
         messages=[{"role": "user", "content": "Answer concisely the following question: " + prompt}]
     )
@@ -134,7 +134,7 @@ def main():
 
     # Load OpenAI and Whisper
     openai_key = load_openai_key()
-    client = OpenAI(api_key=openai_key)
+    openai.api_key = openai_key
     whisper_model = load_whisper_model(MODEL_SIZE)
 
     # Input: Mic or keyboard
