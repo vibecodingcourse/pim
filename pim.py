@@ -146,7 +146,7 @@ def main():
         user_text = input("⌨️ Type your question: ")
 
     # GPT + TTS
-    reply_text = query_chatgpt(client, user_text)
+    reply_text = query_chatgpt(client, user_text, OPENAI_MODEL)
     audio_path = synthesize_speech(reply_text)
 
     # Output: Print always, play if speaker
