@@ -99,7 +99,7 @@ def transcribe_audio(model, audio_path):
 def query_chatgpt(client, prompt, OPENAI_MODEL):
     print("🤖 Querying ChatGPT...")
     response = client.chat.completions.create(
-        model=model,
+        model=OPENAI_MODEL,
         messages=[{"role": "user", "content": "Answer concisely the following question: " + prompt}]
     )
     reply = response.choices[0].message.content.strip()
