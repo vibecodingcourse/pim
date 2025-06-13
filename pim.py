@@ -135,7 +135,7 @@ def main():
 
     # Load OpenAI and Whisper
     openai_key = load_openai_key()
-    openai.api_key = openai_key
+    client = OpenAI(api_key=openai_key)
     whisper_model = load_whisper_model(MODEL_SIZE)
 
     # Input: Mic or keyboard
