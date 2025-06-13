@@ -2,7 +2,7 @@ from openai import OpenAI
 import os
 
 # Replace this line with your real method of loading the key:
-os.environ["OPENAI_API_KEY"] = "sk-proj-2RaWxuLKlPHGtTohDwf1T3BlbkFJkgujlSG5ym56OHjjnoyE"
+os.environ["OPENAI_API_KEY"] = "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"
 
 client = OpenAI()
 
