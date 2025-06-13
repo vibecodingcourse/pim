@@ -23,9 +23,13 @@ HAS_SPEAKER = False
 
 # ========== SETUP FUNCTIONS ==========
 
-def load_openai_key(filepath="openai.txt"):
-    with open(filepath, "r") as f:
-        return f.read().strip()
+def load_openai_key():
+    try:
+        with open("part1.txt", "r") as f1, open("part2.txt", "r") as f2:
+            return (f1.read().strip() + f2.read().strip())
+    except FileNotFoundError:
+        print("❌ API key parts not found.")
+        sys.exit(1)
 
 
 def load_whisper_model(size="base"):
