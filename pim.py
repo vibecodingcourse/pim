@@ -95,12 +95,11 @@ def transcribe_audio(model, audio_path):
     return result["text"]
 
 
-def query_chatgpt(prompt, model="gpt-4"):
+def query_chatgpt(client, prompt, model="gpt-4.1"):
     print("🤖 Querying ChatGPT...")
-    client = OpenAI()
-    response = client.responses.create(
+    response = client.chat.completions.create(
         model=model,
-        input="Answer concisely the following question: " + prompt
+        messages=[{"role": "user", "content": "Answer concisely the following question: " + prompt}]
     )
     reply = response.choices[0].message.content.strip()
     print("💬 GPT Response:", reply)
@@ -146,7 +145,7 @@ def main():
         user_text = input("⌨️ Type your question: ")
 
     # GPT + TTS
-    reply_text = query_chatgpt(user_text)
+    reply_text = query_chatgpt(client, user_text)
     audio_path = synthesize_speech(reply_text)
 
     # Output: Print always, play if speaker
