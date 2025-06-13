@@ -9,7 +9,7 @@ import queue
 import sys
 import platform
 import os
-import openai
+from openai import OpenAI
 
 # ========== CONFIG ==========
 
@@ -97,9 +97,10 @@ def transcribe_audio(model, audio_path):
 
 def query_chatgpt(prompt, model="gpt-4"):
     print("🤖 Querying ChatGPT...")
-    response = openai.ChatCompletion.create(
+    client = OpenAI()
+    response = client.responses.create(
         model=model,
-        messages=[{"role": "user", "content": "Answer concisely the following question: " + prompt}]
+        input="Answer concisely the following question: " + prompt
     )
     reply = response.choices[0].message.content.strip()
     print("💬 GPT Response:", reply)
