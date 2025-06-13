@@ -52,7 +52,7 @@ def detect_speaker():
     try:
         devices = sd.query_devices()
         for device in devices:
-            if device['max_output_channels'] > 0:
+            if device['max_output_channels'] > 0 and 'dummy' not in device['name'].lower():
                 return True
     except Exception as e:
         print("⚠️ Speaker detection failed:", e)
@@ -122,17 +122,15 @@ def synthesize_speech(text, output_path=None):
 
 def play_audio(path):
     print(f"🔊 Playing audio: {path}")
-    if not HAS_SPEAKER:
-        print("🔇 No speaker detected — skipping audio playback.")
-        return
-
     try:
         if IS_MAC:
-            subprocess.run(["afplay", path])
+            subprocess.run(["afplay", path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         else:
-            subprocess.run(["mpg123", path])
+            subprocess.run(["mpg123", path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except FileNotFoundError:
+        print("❌ 'mpg123' is not installed. Run: sudo apt install mpg123")
     except Exception as e:
-        print("⚠️ Error during audio playback:", e)
+        print("⚠️ Playback error:", e)
 
 # ========== MAIN ENTRY POINT ==========
 
@@ -161,7 +159,10 @@ def main():
 
     # Output: Print always, play if speaker
     print("🖨️ Output:", reply_text)
-    play_audio(audio_path)
+    if HAS_SPEAKER:
+        play_audio(audio_path)
+    else:
+        print("🔇 No speaker detected — skipping audio playback.")
 
 if __name__ == "__main__":
     main()
