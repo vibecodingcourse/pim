@@ -15,6 +15,7 @@ from openai import OpenAI
 
 AUDIO_INPUT_PATH = "input.wav"
 MODEL_SIZE = "base"  # whisper: tiny, base, small, medium, large
+OPENAI_MODEL = "gpt-4.1"
 IS_MAC = platform.system() == "Darwin"
 HAS_MIC = False
 HAS_SPEAKER = False
@@ -95,7 +96,7 @@ def transcribe_audio(model, audio_path):
     return result["text"]
 
 
-def query_chatgpt(client, prompt, model="gpt-4.1"):
+def query_chatgpt(client, prompt, OPENAI_MODEL):
     print("🤖 Querying ChatGPT...")
     response = client.chat.completions.create(
         model=model,
