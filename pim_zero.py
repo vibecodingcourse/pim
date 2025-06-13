@@ -84,7 +84,7 @@ def detect_speaker():
 
 # ========== AUDIO RECORDING ==========
 
-def record_audio_interactive(output_path="input.wav", samplerate=16000, channels=1):
+def record_audio_interactive(output_path="input.wav", samplerate=None, channels=1):
     print("🎙️ Press ENTER to start recording...")
     input()
     print("⏺️ Recording... Press ENTER again to stop.")
@@ -92,7 +92,7 @@ def record_audio_interactive(output_path="input.wav", samplerate=16000, channels
     q = queue.Queue()
     recording = True
 
-    # Auto-select the first real input device
+    # Select the first real input device
     mic_index = None
     try:
         devices = sd.query_devices()
@@ -101,12 +101,16 @@ def record_audio_interactive(output_path="input.wav", samplerate=16000, channels
             if dev['max_input_channels'] > 0 and 'monitor' not in name and 'dummy' not in name:
                 mic_index = idx
                 print(f"🎤 Selected input device: {dev['name']} (device #{idx})")
+                if samplerate is None:
+                    samplerate = int(dev['default_samplerate'])
+                    print(f"🎚️ Using supported sample rate: {samplerate}")
                 break
     except Exception as e:
         print("⚠️ Could not list input devices:", e)
 
     if mic_index is None:
-        print("⚠️ No suitable input device found. Using default input.")
+        print("⚠️ No suitable mic found. Using default.")
+        mic_index = None
 
     def callback(indata, frames, time, status):
         if status:
@@ -114,19 +118,13 @@ def record_audio_interactive(output_path="input.wav", samplerate=16000, channels
         q.put(indata.copy())
 
     with sf.SoundFile(output_path, mode='w', samplerate=samplerate, channels=channels) as file:
-        with sd.InputStream(
-            samplerate=samplerate,
-            channels=channels,
-            callback=callback,
-            device=mic_index  # can be None (default)
-        ):
+        with sd.InputStream(samplerate=samplerate, channels=channels, callback=callback, device=mic_index):
             def stopper():
                 nonlocal recording
                 input()
                 recording = False
 
             threading.Thread(target=stopper).start()
-
             while recording:
                 file.write(q.get())
 
