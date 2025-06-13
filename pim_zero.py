@@ -155,7 +155,8 @@ def query_llm(client, prompt, model_name, use_local=False):
         try:
             from llama_cpp import Llama
             llm = Llama(model_path=LOCAL_LLM_PATH, n_ctx=1024)
-            result = llm(prompt, max_tokens=200)
+            system_prompt = "You are a helpful assistant. Answer concisely:\n"
+            result = llm(system_prompt + prompt, max_tokens=200)
             reply = result["choices"][0]["text"].strip()
             print("💬 Local LLM Response:", reply)
             return reply
@@ -196,10 +197,12 @@ def play_audio(path):
     try:
         if IS_MAC:
             subprocess.run(["afplay", path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        elif path.endswith(".wav"):
+            subprocess.run(["aplay", path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         else:
             subprocess.run(["mpg123", path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except FileNotFoundError:
-        print("❌ 'mpg123' not installed. Run: sudo apt install mpg123")
+        print("❌ 'mpg123' or 'aplay' not installed. Run: sudo apt install mpg123 aplay")
     except Exception as e:
         print("⚠️ Playback error:", e)
 
@@ -236,28 +239,43 @@ def main():
     client = OpenAI()
     whisper_model = load_whisper_model(MODEL_SIZE) if USE_LOCAL_STT else None
 
-    # Get input
-    if has_mic:
-        record_audio_interactive(output_path=AUDIO_INPUT_PATH)
-        if USE_LOCAL_STT:
-            user_text = transcribe_audio_local(whisper_model, AUDIO_INPUT_PATH)
-        else:
-            user_text = transcribe_audio_openai(client, AUDIO_INPUT_PATH)
-    else:
-        user_text = input("⌨️ Type your question: ")
+    print("🌀 Ready. Say or type 'exit' to quit.\n")
 
-    # Get reply
-    reply_text = query_llm(client, user_text, OPENAI_MODEL, use_local=USE_LOCAL_LLM)
+    while True:
+        try:
+            # Get input
+            if has_mic:
+                record_audio_interactive(output_path=AUDIO_INPUT_PATH)
+                if USE_LOCAL_STT:
+                    user_text = transcribe_audio_local(whisper_model, AUDIO_INPUT_PATH)
+                else:
+                    user_text = transcribe_audio_openai(client, AUDIO_INPUT_PATH)
+            else:
+                user_text = input("⌨️ Type your question: ")
 
-    # Generate audio
-    audio_path = synthesize_speech(reply_text, use_local=USE_LOCAL_TTS)
+            user_text = user_text.strip().lower()
+            if user_text in ["exit", "quit", "bye"]:
+                print("👋 Goodbye!")
+                break
 
-    # Output
-    print("🖨️ Output:", reply_text)
-    if has_speaker and audio_path:
-        play_audio(audio_path)
-    else:
-        print("🔇 No speaker detected or audio not generated.")
+            # Get reply
+            reply_text = query_llm(client, user_text, OPENAI_MODEL, use_local=USE_LOCAL_LLM)
 
+            # Generate audio
+            audio_path = synthesize_speech(reply_text, use_local=USE_LOCAL_TTS)
+
+            # Output
+            print("🖨️ Output:", reply_text)
+            if has_speaker and audio_path:
+                play_audio(audio_path)
+            else:
+                print("🔇 No speaker detected or audio not generated.")
+
+        except KeyboardInterrupt:
+            print("\n👋 Exiting by Ctrl+C")
+            break
+        except Exception as e:
+            print(f"⚠️ Unexpected error: {e}")
+            
 if __name__ == "__main__":
     main()
