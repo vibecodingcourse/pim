@@ -122,11 +122,17 @@ def synthesize_speech(text, output_path=None):
 
 def play_audio(path):
     print(f"🔊 Playing audio: {path}")
-    if IS_MAC:
-        subprocess.run(["afplay", path])
-    else:
-        subprocess.run(["mpg123", path])
+    if not HAS_SPEAKER:
+        print("🔇 No speaker detected — skipping audio playback.")
+        return
 
+    try:
+        if IS_MAC:
+            subprocess.run(["afplay", path])
+        else:
+            subprocess.run(["mpg123", path])
+    except Exception as e:
+        print("⚠️ Error during audio playback:", e)
 
 # ========== MAIN ENTRY POINT ==========
 
@@ -155,11 +161,7 @@ def main():
 
     # Output: Print always, play if speaker
     print("🖨️ Output:", reply_text)
-    if HAS_SPEAKER:
-        play_audio(audio_path)
-    else:
-        print("🔇 No speaker detected — skipping audio playback.")
-
+    play_audio(audio_path)
 
 if __name__ == "__main__":
     main()
