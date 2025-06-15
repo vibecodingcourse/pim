@@ -1,5 +1,5 @@
 import whisper
-from gtts import gTTS
+# from gtts import gTTS
 import uuid
 import subprocess
 import threading
@@ -213,7 +213,7 @@ def query_llm(client, prompt, model_name, use_local=False):
         print("💬 GPT Response:", reply)
         return reply
 
-def synthesize_speech(text, output_path=None, use_local=False):
+def synthesize_speech_gtts(text, output_path=None, use_local=False):
     if not output_path:
         output_path = f"response_{uuid.uuid4().hex}.mp3"
 
@@ -231,6 +231,34 @@ def synthesize_speech(text, output_path=None, use_local=False):
         tts = gTTS(text)
         tts.save(output_path)
         return output_path
+
+def synthesize_speech_openai(text, output_path=None, use_local=False):
+    if not output_path:
+        output_path = f"response_{uuid.uuid4().hex}.mp3"
+
+    if use_local:
+        print("🎧 Generating speech with espeak (offline)...")
+        output_wav = output_path.replace(".mp3", ".wav")
+        try:
+            subprocess.run(["espeak", text, "-w", output_wav])
+            return output_wav
+        except Exception as e:
+            print("❌ espeak failed:", e)
+            return None
+    else:
+        print("🧬 Generating TTS via OpenAI API...")
+        try:
+            response = client.audio.speech.create(
+                model="tts-1",  # or "tts-1-hd"
+                voice="nova",   # "nova", "alloy", "echo", "fable", "onyx", "shimmer"
+                input=text
+            )
+            with open(output_path, "wb") as f:
+                f.write(response.content)
+            return output_path
+        except Exception as e:
+            print("❌ OpenAI TTS failed:", e)
+            return None
 
 def play_audio(path):
     print(f"🔊 Playing audio: {path}")
@@ -257,7 +285,7 @@ def start_interaction():
         user_text = transcribe_audio_openai(client, AUDIO_INPUT_PATH)
 
     reply_text = query_llm(client, user_text, OPENAI_MODEL, use_local=USE_LOCAL_LLM)
-    audio_path = synthesize_speech(reply_text, use_local=USE_LOCAL_TTS)
+    audio_path = synthesize_speech_openai(reply_text, use_local=USE_LOCAL_TTS)
 
     set_state("speaking")
     if has_speaker and audio_path:
