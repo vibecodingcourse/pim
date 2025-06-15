@@ -24,7 +24,7 @@ AUDIO_INPUT_PATH = "input.wav"
 MODEL_SIZE = "base"
 OPENAI_MODEL = "gpt-4.1"
 LOCAL_LLM_PATH = "phi-2.Q4_K_M.gguf"
-SYSTEM_PROMPT = "You are kind helper like dobbie in Harry Potter. Always answer concisely in English:\n"
+SYSTEM_PROMPT = "You are a concise assistant. Only answer the user's question without repeating or formatting. Respond in English and keep it short:\n"
 IS_MAC = platform.system() == "Darwin"
 
 USE_LOCAL_STT = False
