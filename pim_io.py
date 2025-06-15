@@ -17,10 +17,8 @@ from signal import pause
 import time
 
 import RPi.GPIO as GPIO
+import atexit
 
-# Reset all GPIO settings before using them
-GPIO.setmode(GPIO.BCM)
-GPIO.cleanup()
 
 sys.path.append('/usr/lib/python3/dist-packages')
 
@@ -41,6 +39,7 @@ USE_LOCAL_TTS = False
 
 button = Button(17, pull_up=True, bounce_time=0.1)
 led = LED(18)
+atexit.register(GPIO.cleanup)
 state = "idle"
 running = True
 
