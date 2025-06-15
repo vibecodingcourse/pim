@@ -265,6 +265,12 @@ def wait_for_enter_key():
 # ========== INIT & RUN ==========
 
 if __name__ == "__main__":
+    import atexit
+    import RPi.GPIO as GPIO
+
+    # Register cleanup to release GPIO pins on normal exit
+    atexit.register(GPIO.cleanup)
+
     pi_model = detect_pi_model()
     online = is_online()
     print(f"🌐 Online: {online}")
@@ -294,4 +300,10 @@ if __name__ == "__main__":
     threading.Thread(target=wait_for_enter_key, daemon=True).start()
 
     print("📥 Press the button or ENTER to start...")
-    pause()
+
+    try:
+        pause()
+    except KeyboardInterrupt:
+        print("\n👋 Exiting with Ctrl+C...")
+    finally:
+        GPIO.cleanup()
