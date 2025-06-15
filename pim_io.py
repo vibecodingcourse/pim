@@ -138,31 +138,33 @@ def record_audio_interactive(output_path="input.wav", duration=None):
     """
     Records audio using arecord from the USB mic (hw:2,0).
     Stops on button press or ENTER key.
-    Saves the recording to the specified output_path.
     """
     print("🎤 Using fallback recorder (arecord)...")
 
     stop_event = threading.Event()
 
     def enter_listener():
-        input("🎙️ Press ENTER to stop recording...\n")
+        time.sleep(0.3)  # buffer to avoid ENTER keypress carry-over
+        print("🎙️ Press ENTER to stop recording.")
+        input()
         stop_event.set()
 
     def button_listener():
         print("🛑 Button pressed to stop recording.")
         stop_event.set()
 
-    # Start listeners
+    # Start listeners BEFORE starting arecord
     threading.Thread(target=enter_listener, daemon=True).start()
     if button:
         button.when_pressed = button_listener
 
-    # Start arecord process (CD quality: 44100 Hz, 16-bit, mono)
-    cmd = ["arecord", "-D", "plughw:2,0", "-f", "cd", output_path]
     print("📼 Recording...")
+
+    # Start arecord recording process
+    cmd = ["arecord", "-D", "plughw:2,0", "-f", "cd", output_path]
     proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-    # Wait until button or enter is pressed
+    # Wait for stop trigger
     try:
         while not stop_event.is_set():
             time.sleep(0.1)
