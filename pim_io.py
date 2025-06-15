@@ -15,10 +15,8 @@ from openai import OpenAI
 from gpiozero import Button, LED
 from signal import pause
 import time
-
-import RPi.GPIO as GPIO
 import atexit
-
+import RPi.GPIO as GPIO
 
 sys.path.append('/usr/lib/python3/dist-packages')
 
@@ -30,16 +28,29 @@ OPENAI_MODEL = "gpt-4.1"
 LOCAL_LLM_PATH = "phi-2.Q4_K_M.gguf"
 IS_MAC = platform.system() == "Darwin"
 
-# Fallback flags (auto-set below)
 USE_LOCAL_STT = False
 USE_LOCAL_LLM = False
 USE_LOCAL_TTS = False
+
+# ========== FORCE GPIO CLEANUP BEFORE USE ==========
+
+def force_gpio_release(pins=[17, 18]):
+    for pin in pins:
+        try:
+            with open("/sys/class/gpio/unexport", "w") as f:
+                f.write(str(pin))
+            print(f"✅ Released GPIO pin {pin}")
+        except Exception:
+            pass  # It’s fine if the pin wasn’t exported
+
+force_gpio_release([17, 18])  # Always run this before setting up GPIO
 
 # ========== GPIO SETUP ==========
 
 button = Button(17, pull_up=True, bounce_time=0.1)
 led = LED(18)
 atexit.register(GPIO.cleanup)
+
 state = "idle"
 running = True
 
@@ -265,12 +276,6 @@ def wait_for_enter_key():
 # ========== INIT & RUN ==========
 
 if __name__ == "__main__":
-    import atexit
-    import RPi.GPIO as GPIO
-
-    # Register cleanup to release GPIO pins on normal exit
-    atexit.register(GPIO.cleanup)
-
     pi_model = detect_pi_model()
     online = is_online()
     print(f"🌐 Online: {online}")
@@ -293,10 +298,7 @@ if __name__ == "__main__":
 
     set_state("ready")
 
-    # Button press
     button.when_pressed = start_interaction
-
-    # ENTER key thread
     threading.Thread(target=wait_for_enter_key, daemon=True).start()
 
     print("📥 Press the button or ENTER to start...")
