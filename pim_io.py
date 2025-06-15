@@ -33,6 +33,7 @@ USE_LOCAL_TTS = False
 
 interaction_lock = threading.Lock()
 stop_event = threading.Event()
+recording_active = False
 
 # ========== FORCE GPIO CLEANUP BEFORE USE ==========
 
@@ -142,6 +143,8 @@ def detect_speaker():
 
 def record_audio_interactive(output_path="input.wav", duration=None):
     print("🎤 Using fallback recorder (arecord)...")
+    global recording_active
+    recording_active = True
     stop_event.clear()
 
     def enter_listener():
@@ -162,6 +165,7 @@ def record_audio_interactive(output_path="input.wav", duration=None):
     finally:
         proc.terminate()
         proc.wait()
+        recording_active = False
         print(f"💾 Audio saved to {output_path}")
         time.sleep(0.5)
 
@@ -281,7 +285,8 @@ def button_loop():
         button.wait_for_press()
         if state == "ready":
             safe_start_interaction()
-        elif state == "listening":
+        elif recording_active:
+            print("🛑 Button pressed to stop recording.")
             stop_event.set()
         time.sleep(0.3)
 
