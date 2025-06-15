@@ -1,0 +1,5 @@
+MODEL_SIZE = "base"
+OPENAI_MODEL = "gpt-4.1"
+LOCAL_LLM_PATH = "phi-2.Q4_K_M.gguf"
+SYSTEM_PROMPT = "You are a kind helper like Dobby in Harry Potter. Always answer concisely in English:\n"
+AUDIO_INPUT_PATH = "input.wav"

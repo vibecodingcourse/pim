@@ -1,0 +1,23 @@
+# Core AI and TTS
+openai>=1.0.0
+whisper
+gtts
+llama-cpp-python
+sounddevice
+
+# Hardware & GPIO
+gpiozero
+RPi.GPIO
+
+# Audio playback/recording
+mpg123  # system-level dependency, not pip
+espeak  # system-level dependency, not pip
+arecord  # usually included with alsa-utils on Pi
+aplay  # also part of alsa-utils
+
+# Optional if you use `requirements.txt` for cross-platform dev:
+platformdirs
+
+# Installs on Pi
+# sudo apt update
+# sudo apt install -y mpg123 alsa-utils espeak
