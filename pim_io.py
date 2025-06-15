@@ -2,8 +2,6 @@ import whisper
 from gtts import gTTS
 import uuid
 import subprocess
-import sounddevice as sd
-import soundfile as sf
 import threading
 import queue
 import sys
@@ -32,6 +30,8 @@ USE_LOCAL_STT = False
 USE_LOCAL_LLM = False
 USE_LOCAL_TTS = False
 
+interaction_lock = threading.Lock()
+
 # ========== FORCE GPIO CLEANUP BEFORE USE ==========
 
 def force_gpio_release(pins=[17, 18]):
@@ -43,7 +43,7 @@ def force_gpio_release(pins=[17, 18]):
         except Exception:
             pass  # It’s fine if the pin wasn’t exported
 
-force_gpio_release([17, 18])  # Always run this before setting up GPIO
+force_gpio_release([17, 18])
 
 # ========== GPIO SETUP ==========
 
@@ -118,6 +118,7 @@ def load_whisper_model(size="base"):
 
 def detect_microphone():
     try:
+        import sounddevice as sd
         devices = sd.query_devices()
         return any(d['max_input_channels'] > 0 for d in devices)
     except Exception as e:
@@ -126,6 +127,7 @@ def detect_microphone():
 
 def detect_speaker():
     try:
+        import sounddevice as sd
         devices = sd.query_devices()
         return any(d['max_output_channels'] > 0 and 'dummy' not in d['name'].lower() for d in devices)
     except Exception as e:
@@ -135,56 +137,47 @@ def detect_speaker():
 # ========== AUDIO RECORDING ==========
 
 def record_audio_interactive(output_path="input.wav", duration=None):
-    """
-    Records audio using arecord from the USB mic (hw:2,0).
-    Stops on button press or ENTER key.
-    """
     print("🎤 Using fallback recorder (arecord)...")
-
     stop_event = threading.Event()
 
     def enter_listener():
-        time.sleep(0.3)  # buffer to avoid ENTER keypress carry-over
-        print("🎙️ Press ENTER to stop recording.")
+        time.sleep(0.3)
+        print("🎤 Press ENTER to stop recording.")
         input()
         stop_event.set()
 
     def button_listener():
-        print("🛑 Button pressed to stop recording.")
+        print("🚩 Button pressed to stop recording.")
         stop_event.set()
 
-    # Start listeners BEFORE starting arecord
     threading.Thread(target=enter_listener, daemon=True).start()
     if button:
         button.when_pressed = button_listener
 
-    print("📼 Recording...")
-
-    # Start arecord recording process
+    print("📀 Recording...")
     cmd = ["arecord", "-D", "plughw:2,0", "-f", "cd", output_path]
     proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-    # Wait for stop trigger
     try:
         while not stop_event.is_set():
             time.sleep(0.1)
     finally:
         proc.terminate()
         proc.wait()
-        print(f"💾 Audio saved to {output_path}")
+        print(f"📅 Audio saved to {output_path}")
 
     return output_path
 
 # ========== CORE LOGIC FUNCTIONS ==========
 
 def transcribe_audio_local(model, audio_path):
-    print(f"🎙️ Transcribing locally: {audio_path}")
+    print(f"🎤 Transcribing locally: {audio_path}")
     result = model.transcribe(audio_path)
     print("🗣️ You said:", result["text"])
     return result["text"]
 
 def transcribe_audio_openai(client, audio_path):
-    print(f"🎙️ Transcribing via OpenAI API: {audio_path}")
+    print(f"🎤 Transcribing via OpenAI API: {audio_path}")
     with open(audio_path, "rb") as audio_file:
         transcript = client.audio.transcriptions.create(
             model="whisper-1",
@@ -195,7 +188,7 @@ def transcribe_audio_openai(client, audio_path):
 
 def query_llm(client, prompt, model_name, use_local=False):
     if use_local:
-        print("🧠 Using local LLM...")
+        print("🧐 Using local LLM...")
         try:
             from llama_cpp import Llama
             llm = Llama(model_path=LOCAL_LLM_PATH, n_ctx=1024)
@@ -248,11 +241,9 @@ def play_audio(path):
     except Exception as e:
         print("⚠️ Playback error:", e)
 
-# ========== SHARED INTERACTION FUNCTION ==========
+# ========== INTERACTION FUNCTIONS ==========
 
 def start_interaction():
-    global USE_LOCAL_STT, USE_LOCAL_LLM, USE_LOCAL_TTS
-
     set_state("listening")
     record_audio_interactive(output_path=AUDIO_INPUT_PATH)
 
@@ -271,12 +262,22 @@ def start_interaction():
     else:
         print("🔇 No speaker detected or audio not generated.")
 
-# ========== ENTER KEY LISTENER THREAD ==========
+def safe_start_interaction():
+    if not interaction_lock.acquire(blocking=False):
+        print("⏳ Already running, ignoring extra trigger.")
+        return
+    try:
+        start_interaction()
+        time.sleep(0.5)
+    finally:
+        interaction_lock.release()
+
+# ========== ENTER KEY LISTENER ==========
 
 def wait_for_enter_key():
     while True:
         input("🖱️ Press ENTER to start interaction...\n")
-        start_interaction()
+        safe_start_interaction()
 
 # ========== INIT & RUN ==========
 
@@ -290,9 +291,9 @@ if __name__ == "__main__":
         USE_LOCAL_LLM = True
         USE_LOCAL_TTS = True
 
-    print(f"🧩 Using local STT: {USE_LOCAL_STT}")
-    print(f"🧩 Using local LLM: {USE_LOCAL_LLM}")
-    print(f"🧩 Using local TTS: {USE_LOCAL_TTS}")
+    print(f"🧹 Using local STT: {USE_LOCAL_STT}")
+    print(f"🧹 Using local LLM: {USE_LOCAL_LLM}")
+    print(f"🧹 Using local TTS: {USE_LOCAL_TTS}")
 
     os.environ["OPENAI_API_KEY"] = load_openai_key()
     client = OpenAI()
@@ -303,7 +304,7 @@ if __name__ == "__main__":
 
     set_state("ready")
 
-    button.when_pressed = start_interaction
+    button.when_pressed = safe_start_interaction
     threading.Thread(target=wait_for_enter_key, daemon=True).start()
 
     print("📥 Press the button or ENTER to start...")
