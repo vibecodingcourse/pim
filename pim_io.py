@@ -31,6 +31,7 @@ USE_LOCAL_LLM = False
 USE_LOCAL_TTS = False
 
 interaction_lock = threading.Lock()
+stop_event = threading.Event()
 
 # ========== FORCE GPIO CLEANUP BEFORE USE ==========
 
@@ -41,7 +42,7 @@ def force_gpio_release(pins=[17, 18]):
                 f.write(str(pin))
             print(f"✅ Released GPIO pin {pin}")
         except Exception:
-            pass  # It’s fine if the pin wasn’t exported
+            pass
 
 force_gpio_release([17, 18])
 
@@ -53,6 +54,8 @@ atexit.register(GPIO.cleanup)
 
 state = "idle"
 running = True
+
+# ========== LED LOOP ==========
 
 def led_loop():
     global state
@@ -138,7 +141,7 @@ def detect_speaker():
 
 def record_audio_interactive(output_path="input.wav", duration=None):
     print("🎤 Using fallback recorder (arecord)...")
-    stop_event = threading.Event()
+    stop_event.clear()
 
     def enter_listener():
         time.sleep(0.3)
@@ -146,13 +149,7 @@ def record_audio_interactive(output_path="input.wav", duration=None):
         input()
         stop_event.set()
 
-    def button_listener():
-        print("🚩 Button pressed to stop recording.")
-        stop_event.set()
-
     threading.Thread(target=enter_listener, daemon=True).start()
-    if button:
-        button.when_pressed = button_listener
 
     print("📀 Recording...")
     cmd = ["arecord", "-D", "plughw:2,0", "-f", "cd", output_path]
@@ -272,6 +269,17 @@ def safe_start_interaction():
     finally:
         interaction_lock.release()
 
+# ========== BUTTON LISTENER LOOP ==========
+
+def button_loop():
+    while True:
+        button.wait_for_press()
+        if state == "ready":
+            safe_start_interaction()
+        elif state == "listening":
+            stop_event.set()
+        time.sleep(0.2)
+
 # ========== ENTER KEY LISTENER ==========
 
 def wait_for_enter_key():
@@ -304,7 +312,7 @@ if __name__ == "__main__":
 
     set_state("ready")
 
-    button.when_pressed = safe_start_interaction
+    threading.Thread(target=button_loop, daemon=True).start()
     threading.Thread(target=wait_for_enter_key, daemon=True).start()
 
     print("📥 Press the button or ENTER to start...")
