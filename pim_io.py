@@ -139,32 +139,46 @@ def record_audio_interactive(output_path="input.wav", samplerate=None, channels=
 
     q = queue.Queue()
     recording = True
+    stop_event = threading.Event()
 
+    # === Select a valid USB microphone ===
     mic_index = None
     try:
         devices = sd.query_devices()
         for idx, dev in enumerate(devices):
-            if dev['max_input_channels'] > 0 and 'monitor' not in dev['name'].lower() and 'dummy' not in dev['name'].lower():
+            if dev['max_input_channels'] > 0 and "Trust GXT" in dev['name']:
                 mic_index = idx
                 samplerate = int(dev['default_samplerate']) if samplerate is None else samplerate
+                print(f"🎤 Using mic: {dev['name']} (index {idx})")
                 break
     except Exception as e:
         print("⚠️ Could not list input devices:", e)
 
-    def callback(indata, frames, time, status):
+    if mic_index is None:
+        print("❌ No suitable microphone found.")
+        return None
+
+    def callback(indata, frames, time_info, status):
         if status:
             print("⚠️", status, file=sys.stderr)
         q.put(indata.copy())
 
+    # === Stop listener: ENTER or button ===
+    def stopper():
+        input("🎙️ Press ENTER to stop recording.\n")
+        stop_event.set()
+
+    def button_stop():
+        print("🛑 Button pressed to stop recording.")
+        stop_event.set()
+
+    threading.Thread(target=stopper, daemon=True).start()
+    if button:
+        button.when_pressed = button_stop
+
     with sf.SoundFile(output_path, mode='w', samplerate=samplerate, channels=channels) as file:
         with sd.InputStream(samplerate=samplerate, channels=channels, callback=callback, device=mic_index):
-            def stopper():
-                nonlocal recording
-                input("🎙️ Press ENTER to stop recording.\n")
-                recording = False
-
-            threading.Thread(target=stopper).start()
-            while recording:
+            while not stop_event.is_set():
                 file.write(q.get())
 
     print(f"💾 Audio saved to {output_path}")
