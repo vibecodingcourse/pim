@@ -1,3 +1,7 @@
+import gpiozero
+from gpiozero.pins.native import NativeFactory
+gpiozero.Device.pin_factory = NativeFactory()
+
 from platform_utils import detect_pi_model, is_online, detect_microphone, detect_speaker
 from openai import OpenAI
 from gpio_handler import start_led_thread, set_state
