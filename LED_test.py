@@ -1,9 +1,9 @@
 from gpiozero import Button, LED
 from signal import pause
 
-# GPIO pin assignments
-button = Button(17, pull_up=True)  # Physical pin 11
-led = LED(18)                      # Physical pin 12
+# Set bounce_time in seconds (e.g., 0.1 = 100ms)
+button = Button(17, pull_up=True, bounce_time=0.1)
+led = LED(18)
 
 def on_press():
     print("✅ Button pressed!")
