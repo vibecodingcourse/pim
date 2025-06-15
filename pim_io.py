@@ -24,6 +24,7 @@ AUDIO_INPUT_PATH = "input.wav"
 MODEL_SIZE = "base"
 OPENAI_MODEL = "gpt-4.1"
 LOCAL_LLM_PATH = "phi-2.Q4_K_M.gguf"
+SYSTEM_PROMPT = "You are kind helper like dobbie in Harry Potter. Always answer concisely in English:\n"
 IS_MAC = platform.system() == "Darwin"
 
 USE_LOCAL_STT = False
@@ -170,7 +171,7 @@ def record_audio_interactive(output_path="input.wav", duration=None):
 
 def transcribe_audio_local(model, audio_path):
     print(f"🎙️ Transcribing locally: {audio_path}")
-    result = model.transcribe(audio_path)
+    result = model.transcribe(audio_path, language="en")
     print("🗣️ You said:", result["text"])
     return result["text"]
 
@@ -179,7 +180,8 @@ def transcribe_audio_openai(client, audio_path):
     with open(audio_path, "rb") as audio_file:
         transcript = client.audio.transcriptions.create(
             model="whisper-1",
-            file=audio_file
+            file=audio_file,
+            language="en"
         )
     print("🗣️ You said:", transcript.text)
     return transcript.text
@@ -190,8 +192,7 @@ def query_llm(client, prompt, model_name, use_local=False):
         try:
             from llama_cpp import Llama
             llm = Llama(model_path=LOCAL_LLM_PATH, n_ctx=1024)
-            system_prompt = "You are a helpful assistant. Answer concisely:\n"
-            result = llm(system_prompt + prompt, max_tokens=200)
+            result = llm(SYSTEM_PROMPT + prompt, max_tokens=200)
             reply = result["choices"][0]["text"].strip()
             print("💬 Local LLM Response:", reply)
             return reply
@@ -202,7 +203,7 @@ def query_llm(client, prompt, model_name, use_local=False):
         print("🤖 Querying ChatGPT...")
         response = client.chat.completions.create(
             model=model_name,
-            messages=[{"role": "user", "content": prompt}]
+            messages=[{"role": "user", "content": SYSTEM_PROMPT + prompt}]
         )
         reply = response.choices[0].message.content.strip()
         print("💬 GPT Response:", reply)
