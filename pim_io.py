@@ -70,7 +70,7 @@ def led_loop():
             led.toggle(); time.sleep(0.5)
         elif state == "speaking":
             for _ in range(3): led.on(); time.sleep(0.1); led.off(); time.sleep(0.1)
-            state = "idle"
+            state = "ready"
         else:
             led.off(); time.sleep(0.1)
 
@@ -145,13 +145,13 @@ def record_audio_interactive(output_path="input.wav", duration=None):
 
     def enter_listener():
         time.sleep(0.3)
-        print("🎤 Press ENTER to stop recording.")
+        print("🛑 Press ENTER or press the BUTTON again to stop recording.")
         input()
         stop_event.set()
 
     threading.Thread(target=enter_listener, daemon=True).start()
 
-    print("📀 Recording...")
+    print("📼 Recording...")
     cmd = ["arecord", "-D", "plughw:2,0", "-f", "cd", output_path]
     proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
@@ -161,20 +161,21 @@ def record_audio_interactive(output_path="input.wav", duration=None):
     finally:
         proc.terminate()
         proc.wait()
-        print(f"📅 Audio saved to {output_path}")
+        print(f"💾 Audio saved to {output_path}")
+        time.sleep(0.5)
 
     return output_path
 
 # ========== CORE LOGIC FUNCTIONS ==========
 
 def transcribe_audio_local(model, audio_path):
-    print(f"🎤 Transcribing locally: {audio_path}")
+    print(f"🎙️ Transcribing locally: {audio_path}")
     result = model.transcribe(audio_path)
     print("🗣️ You said:", result["text"])
     return result["text"]
 
 def transcribe_audio_openai(client, audio_path):
-    print(f"🎤 Transcribing via OpenAI API: {audio_path}")
+    print(f"🎙️ Transcribing via OpenAI API: {audio_path}")
     with open(audio_path, "rb") as audio_file:
         transcript = client.audio.transcriptions.create(
             model="whisper-1",
@@ -185,7 +186,7 @@ def transcribe_audio_openai(client, audio_path):
 
 def query_llm(client, prompt, model_name, use_local=False):
     if use_local:
-        print("🧐 Using local LLM...")
+        print("🧠 Using local LLM...")
         try:
             from llama_cpp import Llama
             llm = Llama(model_path=LOCAL_LLM_PATH, n_ctx=1024)
@@ -259,6 +260,9 @@ def start_interaction():
     else:
         print("🔇 No speaker detected or audio not generated.")
 
+    print("📥 Press the button or ENTER to start...")
+
+
 def safe_start_interaction():
     if not interaction_lock.acquire(blocking=False):
         print("⏳ Already running, ignoring extra trigger.")
@@ -278,7 +282,7 @@ def button_loop():
             safe_start_interaction()
         elif state == "listening":
             stop_event.set()
-        time.sleep(0.2)
+        time.sleep(0.3)
 
 # ========== ENTER KEY LISTENER ==========
 
@@ -299,9 +303,9 @@ if __name__ == "__main__":
         USE_LOCAL_LLM = True
         USE_LOCAL_TTS = True
 
-    print(f"🧹 Using local STT: {USE_LOCAL_STT}")
-    print(f"🧹 Using local LLM: {USE_LOCAL_LLM}")
-    print(f"🧹 Using local TTS: {USE_LOCAL_TTS}")
+    print(f"🧩 Using local STT: {USE_LOCAL_STT}")
+    print(f"🧩 Using local LLM: {USE_LOCAL_LLM}")
+    print(f"🧩 Using local TTS: {USE_LOCAL_TTS}")
 
     os.environ["OPENAI_API_KEY"] = load_openai_key()
     client = OpenAI()
