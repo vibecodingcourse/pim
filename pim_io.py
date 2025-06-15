@@ -16,6 +16,12 @@ from gpiozero import Button, LED
 from signal import pause
 import time
 
+import RPi.GPIO as GPIO
+
+# Reset all GPIO settings before using them
+GPIO.setmode(GPIO.BCM)
+GPIO.cleanup()
+
 sys.path.append('/usr/lib/python3/dist-packages')
 
 # ========== CONFIG ==========
