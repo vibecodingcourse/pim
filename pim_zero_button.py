@@ -15,6 +15,9 @@ from openai import OpenAI
 from gpiozero import Button, LED
 from signal import pause
 
+import sys
+sys.path.append('/usr/lib/python3/dist-packages')
+
 # ========== CONFIG ==========
 
 AUDIO_INPUT_PATH = "input.wav"
